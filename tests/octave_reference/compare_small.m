@@ -1,0 +1,16 @@
+root = fileparts(fileparts(fileparts(mfilename('fullpath'))));
+addpath(fullfile(root, 'tests', 'octave_reference'));
+small = dlmread(fullfile(root, 'data', 'H_small.edges'), ' ', 1, 0);
+H = sparse(small(:,1)+1, small(:,2)+1, 1, 2, 4);
+[estimate, success] = belief_propagation_DV([0 1 1 0], [1 0 0 0], H, 0.1, 10);
+estimate = char(estimate);
+fprintf('SMALL_DV estimate=%s success=%d\n', estimate, success);
+assert(success == 1 && strcmp(estimate, '0110'));
+cv_estimate = belief_propagation_CV([1 1 1 1], [-1 -1 -1 1], H, 0, 10);
+cv_estimate = char(cv_estimate);
+fprintf('SMALL_CV estimate=%s\n', cv_estimate);
+assert(strcmp(cv_estimate, '0110'));
+encoded = RA_encode(H, [1 0]);
+encoded = char(num2str(encoded, '%d'));
+fprintf('SMALL_ENCODE codeword=%s\n', encoded);
+assert(strcmp(encoded, '1011'));

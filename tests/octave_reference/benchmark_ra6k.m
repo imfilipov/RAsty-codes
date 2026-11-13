@@ -1,0 +1,13 @@
+root = fileparts(fileparts(fileparts(mfilename('fullpath'))));
+addpath(fullfile(root, 'tests', 'octave_reference'));
+path = fullfile(root, 'data', 'RA_n6000_R150.edges');
+fid = fopen(path, 'r'); dims = fscanf(fid, '%d', 2); fclose(fid);
+edges = dlmread(path, ' ', 1, 0);
+H = sparse(edges(:,1)+1, edges(:,2)+1, 1, dims(1), dims(2));
+A = char(strtrim(fileread(fullfile(root, 'data', 'alice_ra6k.txt'))));
+M = char(strtrim(fileread(fullfile(root, 'data', 'message_ra6k.txt'))));
+tic();
+output = evalc('[estimate, success] = belief_propagation_DV(A, M, H, 0.01, 100);');
+elapsed_ms = toc()*1000;
+assert(success == 1);
+fprintf('OCTAVE_RA6K elapsed_ms=%.3f runs=1\n', elapsed_ms);

@@ -1,0 +1,11 @@
+/target/
+/tools/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+*.egg-info/
+build/
+dist/
+results/*.json
+

@@ -1,0 +1,20 @@
+[package]
+name = "ra-reconcile"
+version = "0.2.0"
+edition = "2021"
+description = "Optimized reverse reconciliation for binary RA-LDPC codes"
+
+[lib]
+name = "ra_reconcile"
+path = "src/lib.rs"
+
+[[bin]]
+name = "ra-reconcile"
+path = "src/main.rs"
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
