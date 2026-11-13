@@ -36,6 +36,101 @@ The Python wrapper builds `target/release/ra-reconcile` automatically if it is m
 
 `decode(...)` returns a `DecodeResult` with the estimated bit string, syndrome status, iteration count, and elapsed time. `decode_cv(...)` accepts quadrature and soft-observation arrays. `decode_batch(...)` takes lists of frame strings and returns results in input order.
 
+## Python Wrapper
+
+The `ra_reconcile` package is a thin Python interface to the Rust CLI. It uses only the Python standard library; NumPy is not required by the wrapper. From the project root, add the package directory to Python's import path:
+
+```powershell
+# Windows PowerShell
+$env:PYTHONPATH = "python"
+```
+
+```sh
+# Linux/macOS
+export PYTHONPATH=python
+```
+
+If the release executable is not present under `target/release`, the first API call builds it with `cargo build --release`. Cargo must be available on `PATH`, or set `RA_CARGO` to its executable. To use an already-built executable, set `RA_RECONCILE_BIN` to its full path. The matrix argument is a path to the sparse edge-list file: its first line contains `m n`, followed by zero-based check-node/bit-node pairs.
+
+### Systematic RA encoding
+
+`encode(matrix, message)` takes a string of `k=n−m` information bits and returns the `n`-bit systematic codeword:
+
+```python
+from ra_reconcile import encode
+
+codeword = encode("data/H_small.edges", "10")
+print(codeword)  # 1011
+```
+
+### Discrete-variable decoding
+
+`decode(matrix, alice, message, p, *, max_iter=100, threads=None)` accepts Alice's length-`n` noisy bit string, Bob's public string `M=C XOR B`, and the estimated bit-error probability `p` (`0 < p < 0.5`). `max_iter` limits belief-propagation iterations. `threads` controls parallel check/bit-node updates for this frame; when omitted, Rust uses the available CPU parallelism.
+
+```python
+from ra_reconcile import decode
+
+result = decode(
+    "data/H_small.edges",
+    alice="0110",
+    message="1000",
+    p=0.1,
+    max_iter=10,
+    threads=1,
+)
+print(result.estimate)    # 0110
+print(result.success)     # True when the parity-check syndrome is zero
+print(result.iterations, result.elapsed_ms)
+```
+
+### Continuous-variable soft decoding
+
+`decode_cv(matrix, x, soft, snr_db, *, max_iter=100, threads=None)` accepts one quadrature `x` and one signed soft observation `soft` per code bit. `snr_db` is the signal-to-noise ratio in decibels. The wrapper writes these arrays to temporary files for the CLI and removes the files after decoding.
+
+```python
+from ra_reconcile import decode_cv
+
+result = decode_cv(
+    "data/H_small.edges",
+    x=[1.0, 1.0, 1.0, 1.0],
+    soft=[-1.0, -1.0, -1.0, 1.0],
+    snr_db=0.0,
+    max_iter=10,
+    threads=1,
+)
+```
+
+### Parallel batch decoding
+
+`decode_batch(matrix, alice_frames, message_frames, p, *, max_iter=100, threads=None)` accepts equal-length, non-empty iterables of frame strings. Independent frames are decoded concurrently, the parity-check graph is loaded once, and results remain in input order. Here `threads` is the number of frame workers; each frame uses one internal worker to avoid nested oversubscription.
+
+```python
+from ra_reconcile import decode_batch
+
+results = decode_batch(
+    "data/H_small.edges",
+    alice_frames=["0110", "0110"],
+    message_frames=["1000", "1000"],
+    p=0.1,
+    max_iter=10,
+    threads=2,
+)
+for frame_number, result in enumerate(results, start=1):
+    print(frame_number, result.estimate, result.success, result.iterations)
+```
+
+### Results and errors
+
+Single-frame decode calls return a `DecodeResult` with:
+
+- `estimate`: the estimated length-`n` codeword as a string of `0` and `1`.
+- `success`: whether the decoded word has zero syndrome. This does not guarantee it is the transmitted codeword.
+- `iterations`: the number of BP iterations performed.
+- `elapsed_ms`: elapsed CLI time in milliseconds. In batch results this is the batch elapsed time divided by the frame count.
+- `stdout`: the CLI's textual summary.
+
+The wrapper raises `ReconciliationError` for CLI/input/build failures. Reaching the iteration limit without a zero syndrome is returned as a result with `success=False`, so callers can inspect or retry it.
+
 ## Commands
 
 ```text
