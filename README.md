@@ -6,6 +6,8 @@ The source is split into focused Rust modules: `graph.rs` stores sparse parity-c
 
 ## Quick start
 
+### Windows PowerShell
+
 ```powershell
 cargo test
 cargo build --release
@@ -18,6 +20,19 @@ On Windows, use the `.exe` suffix. The Python wrapper can build the release bina
 $env:PYTHONPATH = "python"
 python -c "from ra_reconcile import encode, decode; h='data/H_small.edges'; print(encode(h, '10')); print(decode(h, '0110', '1000', 0.1))"
 ```
+
+### Linux and macOS (POSIX shell)
+
+Install the Rust stable toolchain and Python 3, then run these commands from the project root:
+
+```sh
+cargo test
+cargo build --release
+./target/release/ra-reconcile --help
+PYTHONPATH=python python3 -c 'from ra_reconcile import encode, decode; h="data/H_small.edges"; print(encode(h, "10")); print(decode(h, "0110", "1000", 0.1))'
+```
+
+The Python wrapper builds `target/release/ra-reconcile` automatically if it is missing. Set `RA_RECONCILE_BIN` or `RA_CARGO` to use a non-default binary or Cargo path. To use the notebooks, install their dependencies with `python3 -m pip install -r requirements-notebooks.txt`, then run `jupyter lab notebooks`.
 
 `decode(...)` returns a `DecodeResult` with the estimated bit string, syndrome status, iteration count, and elapsed time. `decode_cv(...)` accepts quadrature and soft-observation arrays. `decode_batch(...)` takes lists of frame strings and returns results in input order.
 
